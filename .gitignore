@@ -3,7 +3,6 @@ dist/
 CITATION.bib
 clipboard.txt
 LICENSE
-project.toml
 README.md
 scenic-comfort-397015-e2bcf18596e8.json
 demo/constants.py
