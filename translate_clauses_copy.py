@@ -1,29 +1,10 @@
-import pandas as pd
-import numpy as np
 import random
 from google.cloud import translate_v2 as translate
 import spacy
 import os
-from tqdm import tqdm
-
 nlp = spacy.load("en_core_web_sm")
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="autonomous-mote-406310-e1b49eaca29c.json"
-
-def main():
-    input_file_path = "/Users/ashwin/Acads/4-1/NLP_Project/CSify/demo/data/split/dev"
-    output_file_path = "/Users/ashwin/Acads/4-1/NLP_Project/CSify/demo/data/FinalAlgo/devCSified"
-
-    with open(input_file_path, 'r', encoding='utf-8') as input_file:
-        lines = [line.strip() for line in input_file]
-         
-    with open(output_file_path, 'w', encoding='utf-8') as output_file:
-        for line in tqdm(lines, desc="Processing", unit="sentence"):
-            english_sentence, _ = line.split('\t', 1)
-            output_file.write(english_sentence + '\n')
-            csified_sentence = translate_sentence(english_sentence)
-            output_file.write(csified_sentence + '\n')
-            output_file.write('\n\n')
 
 def print_structure(sentence):
   doc = nlp(sentence)
@@ -34,6 +15,8 @@ def print_structure(sentence):
     print(token.text, "\t", token.i, "\t",
     token.pos_, "\t", token.dep_, "\t\tAncestors: ",
     ancestors, "\n\t\t\t\t\tChildren: ", children)
+
+
 
 def break_into_independent_clauses(sentence):
     doc = nlp(sentence)
@@ -48,7 +31,6 @@ def break_into_independent_clauses(sentence):
     # Initialize a variable to keep track of the current clause
     current_clause = []
     isAdjunct = False
-    nounsAdjctives = []
 
     phraseIdx = 0
     i = 0
@@ -56,9 +38,6 @@ def break_into_independent_clauses(sentence):
     while i < num_tokens:
 
         token = tokens[i]
-
-        if token.pos_ == "NOUN" or token.pos_ == "ADJ":
-            nounsAdjctives.append(token.text)
 
         if token.dep_ == "punct" and token.text == ",":
             # When a comma is encountered, add the current clause to the list
@@ -129,7 +108,8 @@ def break_into_independent_clauses(sentence):
         else:
             independent_clauses.append([phraseIdx, " ".join(current_clause)])
         phraseIdx += 1
-    return independent_clauses, adjuncts, nounsAdjctives
+    return independent_clauses, adjuncts
+
 
 def translate_text(text, target_language="hi"):
     # Create a Translate client
@@ -141,47 +121,30 @@ def translate_text(text, target_language="hi"):
     # Return the translated text
     return result["input"], result["translatedText"]
 
-def translate_sentence(sentence, target_language="hi"):
-    independent_clauses, adjuncts, nounsAdjctives = break_into_independent_clauses(sentence)
 
-    # print(independent_clauses)
-    # print(adjuncts)
-
-    translated_independent_clauses = []
-    translated_adjuncts = []
+def translate_random_clauses(sentence, target_language="hi"):
+    independent_clauses = break_into_independent_clauses(sentence)
+    translated_clauses = []
 
     # Randomly choose the clauses to translate
     clauses_to_translate = random.sample(range(len(independent_clauses)), random.randint(1, len(independent_clauses)))
 
     for i, clause in enumerate(independent_clauses):
         if i in clauses_to_translate:
-            input_text, translated_text = translate_text(clause[1], target_language)
-            translated_independent_clauses.append([clause[0],translated_text])
+            input_text, translated_text = translate_text(clause, target_language)
+            translated_clauses.append(translated_text)
         else:
-            translated_independent_clauses.append(clause)
+            translated_clauses.append(clause)
 
-    for i, clause in enumerate(adjuncts):
-        words = clause[1].split()
-        for j,word in enumerate(words):
-            if word in nounsAdjctives:
-                toTranslate = random.choice([0,1])
-                if toTranslate:
-                    actual, translated = translate_text(word)
-                    words[j] = translated
-        
-        translatedSentence = " ".join(words)
-        translated_adjuncts.append([clause[0],translatedSentence])
+    code_switched_sentence = " ".join(translated_clauses)
+    return code_switched_sentence
 
-    # print(translated_independent_clauses)
-    # print(translated_adjuncts)
 
-    return mergeSentence(translated_independent_clauses, translated_adjuncts)
-
-def mergeSentence(translated_independent_clauses, translated_adjuncts):
-    all_translated = translated_independent_clauses + translated_adjuncts
-    all_translated = sorted(all_translated, key=lambda x: x[0])
-    result = " ".join(phrase[1] for phrase in all_translated)
-    return result
-
-if __name__ == "__main__":
-    main()
+sentence = "I need to take a class or find a new friend who likes to generate results"
+# sentence = "In the quiet embrace of a moonlit garden, where the fragrant blooms painted the air with an intoxicating allure, their bodies entwined in a slow, sensuous dance, and as the silvery glow of the stars caressed their entangled forms, a symphony of whispered desires and longing sighs echoed in the velvety night, becoming an indelible melody of love etched into the very fabric of their shared existence.."
+independent_clauses, adjuncts = break_into_independent_clauses(sentence)
+print(independent_clauses)
+print(adjuncts)
+# code_switched_sentence = translate_random_clauses(sentence, target_language="hi")
+# print("Original: ", sentence)
+# print("Code-Switched: ", code_switched_sentence)

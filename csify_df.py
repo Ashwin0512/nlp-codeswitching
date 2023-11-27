@@ -3,7 +3,7 @@ from translate_clauses import translate_random_clauses
 from tqdm import tqdm
 
 input_file_path = "demo/data/split/check"
-output_file_path = "csified1"
+output_file_path = "csified2"
 
 # Function to read the input dataset and extract English sentences
 def read_dataset(file_path):
